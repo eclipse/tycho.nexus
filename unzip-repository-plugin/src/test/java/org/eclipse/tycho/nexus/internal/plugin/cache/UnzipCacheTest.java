@@ -1,12 +1,12 @@
 /*******************************************************************************
- * Copyright (c) 2010, 2012 SAP AG and others.
+ * Copyright (c) 2010, 2014 SAP SE and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *    SAP AG - initial API and implementation
+ *    SAP SE - initial API and implementation
  *******************************************************************************/
 package org.eclipse.tycho.nexus.internal.plugin.cache;
 
@@ -21,9 +21,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.eclipse.tycho.nexus.internal.plugin.DefaultUnzipRepository;
+import org.eclipse.tycho.nexus.internal.plugin.test.RepositoryMock;
 import org.eclipse.tycho.nexus.internal.plugin.test.TestUtil;
 import org.eclipse.tycho.nexus.internal.plugin.test.UnzipPluginTestSupport;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.sonatype.nexus.proxy.ItemNotFoundException;
@@ -49,82 +52,86 @@ public class UnzipCacheTest extends UnzipPluginTestSupport {
 
     @Before
     public void setupTestRepos() throws Exception {
-        snapshotRepoUnzipCache = createUnzipRepo(createSnapshotRepo()).getCache();
+        final RepositoryMock snapshotRepoMock = createSnapshotRepo();
+        final DefaultUnzipRepository unzipRepo = createUnzipRepo(snapshotRepoMock);
+        snapshotRepoUnzipCache = unzipRepo.getCache();
+        Assert.assertNotNull(snapshotRepoUnzipCache.repository.getRepositoryItemUidAttributeManager());
 
         oldZip = snapshotRepoUnzipCache.getArchive(PATH_TO_OLD_ZIP);
+        Assert.assertNotNull(snapshotRepoUnzipCache.repository.getRepositoryItemUidAttributeManager());
         oldOtherzip = snapshotRepoUnzipCache.getArchive(PATH_TO_OLD_OTHER_ZIP);
         latestOtherZip = snapshotRepoUnzipCache.getArchive(PATH_TO_LATEST_OTHER_ZIP);
-        assertTrue(oldOtherzip.exists());
-        assertTrue(oldZip.exists());
-        assertTrue(latestOtherZip.exists());
+        Assert.assertTrue(oldOtherzip.exists());
+        Assert.assertTrue(oldZip.exists());
+        Assert.assertTrue(latestOtherZip.exists());
     }
 
     @Test
     public void testCleanUpOldSnapshots() throws StorageException, ItemNotFoundException {
 
         final File latestZip = new File(oldZip.getParentFile() + File.separator + "archive-1.0.0-20101013-2.zip");
-        assertFalse(latestZip.exists());
+        Assert.assertFalse(latestZip.exists());
 
         final ConversionResult conversionResult = new ConversionResult(SNAPSHOT_REQUEST_PATH, PATH_TO_LATEST_ZIP,
                 LATEST_VERSION, PATH_UP_TO_VERSION);
 
-        assertTrue(conversionResult.isPathConverted());
+        Assert.assertTrue(conversionResult.isPathConverted());
 
         final File latestZipFromCache = snapshotRepoUnzipCache.getArchive(PATH_TO_LATEST_ZIP);
         snapshotRepoUnzipCache.cleanSnapshots(conversionResult);
-        assertEquals(latestZip.getPath(), latestZipFromCache.getPath());
+        Assert.assertEquals(latestZip.getPath(), latestZipFromCache.getPath());
 
-        assertFalse(oldZip.exists());
-        assertFalse(oldOtherzip.exists());
+        Assert.assertFalse(oldZip.exists());
+        Assert.assertFalse(oldOtherzip.exists());
 
-        assertTrue(latestZip.exists());
-        assertTrue(latestOtherZip.exists());
+        Assert.assertTrue(latestZip.exists());
+        Assert.assertTrue(latestOtherZip.exists());
     }
 
     @Test
     public void testCleanUpOldSnapshotsCurrentSnapshotAlreadyCached() throws StorageException, ItemNotFoundException {
 
         final File latestZip = snapshotRepoUnzipCache.getArchive(PATH_TO_LATEST_ZIP);
-        assertTrue(latestZip.exists());
-        assertTrue(oldZip.exists());
-        assertTrue(oldOtherzip.exists());
-        assertTrue(latestOtherZip.exists());
+        Assert.assertTrue(latestZip.exists());
+        Assert.assertTrue(oldZip.exists());
+        Assert.assertTrue(oldOtherzip.exists());
+        Assert.assertTrue(latestOtherZip.exists());
 
         final ConversionResult conversionResult = new ConversionResult("/ga/1.0.0-SNAPSHOT/archive-1.0.0-SNAPSHOT.zip",
                 PATH_TO_LATEST_ZIP, "20101013", PATH_UP_TO_VERSION);
 
-        assertTrue(conversionResult.isPathConverted());
+        Assert.assertTrue(conversionResult.isPathConverted());
 
         final File latestZipFromCache = snapshotRepoUnzipCache.getArchive(PATH_TO_LATEST_ZIP);
         snapshotRepoUnzipCache.cleanSnapshots(conversionResult);
-        assertEquals(latestZip.getPath(), latestZipFromCache.getPath());
+        Assert.assertEquals(latestZip.getPath(), latestZipFromCache.getPath());
 
-        assertFalse(oldZip.exists());
-        assertFalse(oldOtherzip.exists());
+        Assert.assertFalse(oldZip.exists());
+        Assert.assertFalse(oldOtherzip.exists());
 
-        assertTrue(latestZip.exists());
-        assertTrue(latestOtherZip.exists());
+        Assert.assertTrue(latestZip.exists());
+        Assert.assertTrue(latestOtherZip.exists());
     }
 
     @Test
     public void testNoCleanUpOldSnapshotsNoConversion() throws StorageException, ItemNotFoundException {
 
         final File latestZip = new File(oldZip.getParentFile() + File.separator + "archive-1.0.0-20101013-2.zip");
-        assertFalse(latestZip.exists());
+        Assert.assertFalse(latestZip.exists());
 
         final ConversionResult conversionResult = new ConversionResult(SNAPSHOT_REQUEST_PATH);
 
-        assertFalse(conversionResult.isPathConverted());
+        Assert.assertFalse(conversionResult.isPathConverted());
 
         final File latestZipFromCache = snapshotRepoUnzipCache.getArchive(PATH_TO_LATEST_ZIP);
         snapshotRepoUnzipCache.cleanSnapshots(conversionResult);
-        assertEquals(latestZip.getPath(), latestZipFromCache.getPath());
+        Assert.assertEquals(latestZip.getPath(), latestZipFromCache.getPath());
 
-        assertTrue(oldZip.exists());
-        assertTrue(oldOtherzip.exists());
+        Assert.assertTrue(oldZip.exists());
+        Assert.assertTrue(oldOtherzip.exists());
 
-        assertTrue(latestZip.exists());
-        assertTrue(latestOtherZip.exists());
+        Assert.assertTrue(latestZip.exists());
+        Assert.assertTrue(latestOtherZip.exists());
     }
 
     @Test
@@ -138,17 +145,17 @@ public class UnzipCacheTest extends UnzipPluginTestSupport {
 
         final ConversionResult conversionResult = new ConversionResult(SNAPSHOT_REQUEST_PATH, PATH_UP_TO_VERSION, false);
 
-        assertFalse(conversionResult.isPathConverted());
-        assertFalse(conversionResult.isASnapshotAvailable());
+        Assert.assertFalse(conversionResult.isPathConverted());
+        Assert.assertFalse(conversionResult.isASnapshotAvailable());
 
         snapshotRepoUnzipCache.cleanSnapshots(conversionResult);
         final File latestZipFromCache2 = snapshotRepoUnzipCache.getArchive(PATH_TO_LATEST_ZIP);
-        assertTrue("Expected that the file would be deleted and recreated by the cache, but was not.",
+        Assert.assertTrue("Expected that the file would be deleted and recreated by the cache, but was not.",
                 modifiedFileLength != latestZipFromCache2.length());
 
-        assertFalse(oldZip.exists());
-        assertFalse(oldOtherzip.exists());
-        assertFalse(latestOtherZip.exists());
+        Assert.assertFalse(oldZip.exists());
+        Assert.assertFalse(oldOtherzip.exists());
+        Assert.assertFalse(latestOtherZip.exists());
 
     }
 
@@ -227,7 +234,6 @@ public class UnzipCacheTest extends UnzipPluginTestSupport {
             final Callable<Void> c2 = new RequestWorker(startSignal, doneSignal, false);
             results.add(executor.submit(c2));
         }
-
         //all threads: GO!
         startSignal.countDown();
 
@@ -270,7 +276,6 @@ public class UnzipCacheTest extends UnzipPluginTestSupport {
         }
 
         void doWork() throws StorageException, ItemNotFoundException {
-
             if (cleanup) {
                 snapshotRepoUnzipCache.getArchive(PATH_TO_LATEST_ZIP);
                 snapshotRepoUnzipCache.cleanSnapshots(new ConversionResult(SNAPSHOT_REQUEST_PATH, PATH_TO_LATEST_ZIP,

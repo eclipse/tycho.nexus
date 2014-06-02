@@ -1,12 +1,12 @@
 /*******************************************************************************
- * Copyright (c) 2010, 2014 SAP AG and others.
+ * Copyright (c) 2010, 2014 SAP SE and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *    SAP AG - initial API and implementation
+ *    SAP SE - initial API and implementation
  *******************************************************************************/
 package org.eclipse.tycho.nexus.internal.plugin;
 
@@ -35,7 +35,7 @@ import org.sonatype.nexus.proxy.repository.HostedRepository;
 import org.sonatype.nexus.proxy.repository.RepositoryKind;
 import org.sonatype.nexus.proxy.repository.ShadowRepository;
 import org.sonatype.nexus.proxy.storage.UnsupportedStorageOperationException;
-import org.sonatype.nexus.util.ItemPathUtils;
+import org.sonatype.nexus.util.PathUtils;
 
 public abstract class DefaultUnzipRepositoryTest extends UnzipPluginTestSupport {
     protected RepositoryMock repositoryMock;
@@ -51,7 +51,7 @@ public abstract class DefaultUnzipRepositoryTest extends UnzipPluginTestSupport 
 
     @Test
     public void testGetRepositoryKind() {
-        final DefaultUnzipRepository repo = new DefaultUnzipRepository();
+        final DefaultUnzipRepository repo = new DefaultUnzipRepository(null, null, null, null, null);
         final RepositoryKind kind = repo.getRepositoryKind();
         Assert.assertEquals(UnzipRepository.class, kind.getMainFacet());
         Assert.assertTrue(kind.isFacetAvailable(ShadowRepository.class));
@@ -91,7 +91,7 @@ public abstract class DefaultUnzipRepositoryTest extends UnzipPluginTestSupport 
         final StorageItem item = unzipRepo.doRetrieveItem(new ResourceStoreRequest(archivePath));
         Assert.assertTrue(item instanceof ZippedStorageCollectionItem);
         final ZippedStorageCollectionItem archiveItem = (ZippedStorageCollectionItem) item;
-        Assert.assertEquals(ItemPathUtils.cleanUpTrailingSlash(archivePath), archiveItem.getPath());
+        Assert.assertEquals(PathUtils.cleanUpTrailingSlash(archivePath), archiveItem.getPath());
         TestUtil.assertMembers(new String[] { archivePath + "/dir" }, new String[] { archivePath + "/test.txt" },
                 archiveItem.list());
     }
@@ -134,7 +134,7 @@ public abstract class DefaultUnzipRepositoryTest extends UnzipPluginTestSupport 
         final StorageItem item = unzipRepo.doRetrieveItem(new ResourceStoreRequest(collectionPath));
         Assert.assertTrue(item instanceof ZippedStorageCollectionItem);
         final StorageCollectionItem collectionItem = (StorageCollectionItem) item;
-        Assert.assertEquals(ItemPathUtils.cleanUpTrailingSlash(collectionPath), collectionItem.getPath());
+        Assert.assertEquals(PathUtils.cleanUpTrailingSlash(collectionPath), collectionItem.getPath());
         final Collection<StorageItem> members = collectionItem.list();
         TestUtil.assertMembers(new String[] { collectionPath + "subdir" },
                 new String[] { collectionPath + "test.txt" }, members);
@@ -168,7 +168,7 @@ public abstract class DefaultUnzipRepositoryTest extends UnzipPluginTestSupport 
         final StorageItem item = unzipRepo.doRetrieveItem(new ResourceStoreRequest(collectionPath));
         Assert.assertTrue(item instanceof ZippedStorageCollectionItem);
         final StorageCollectionItem collectionItem = (StorageCollectionItem) item;
-        Assert.assertEquals(ItemPathUtils.cleanUpTrailingSlash(collectionPath), collectionItem.getPath());
+        Assert.assertEquals(PathUtils.cleanUpTrailingSlash(collectionPath), collectionItem.getPath());
         final Collection<StorageItem> members = collectionItem.list();
         TestUtil.assertMembers(new String[] {}, new String[] { collectionPath + "a.txt" }, members);
         final DefaultStorageFileItem fileItem = (DefaultStorageFileItem) TestUtil.findItem(collectionPath + "a.txt",

@@ -1,32 +1,38 @@
 /*******************************************************************************
- * Copyright (c) 2010, 2014 SAP AG and others.
+ * Copyright (c) 2010, 2014 SAP SE and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *    SAP AG - initial API and implementation
+ *    SAP SE - initial API and implementation
+ *    Angel Lopez-Cima - convert from plexus to javax.inject annotations (bug 432793)
  *******************************************************************************/
 package org.eclipse.tycho.nexus.internal.plugin;
 
 import java.io.File;
 import java.util.Arrays;
 
-import org.codehaus.plexus.component.annotations.Component;
-import org.codehaus.plexus.component.annotations.Requirement;
+import javax.enterprise.inject.Typed;
+import javax.inject.Inject;
+import javax.inject.Named;
+
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.eclipse.sisu.Description;
 import org.eclipse.tycho.nexus.internal.plugin.cache.ConversionResult;
 import org.eclipse.tycho.nexus.internal.plugin.cache.RequestPathConverter;
 import org.eclipse.tycho.nexus.internal.plugin.cache.UnzipCache;
 import org.eclipse.tycho.nexus.internal.plugin.storage.Util;
 import org.eclipse.tycho.nexus.internal.plugin.storage.ZipAwareStorageCollectionItem;
 import org.eclipse.tycho.nexus.internal.plugin.storage.ZippedItem;
+import org.slf4j.Logger;
+import org.sonatype.configuration.ConfigurationException;
 import org.sonatype.nexus.ApplicationStatusSource;
 import org.sonatype.nexus.SystemState;
-import org.sonatype.nexus.configuration.Configurator;
 import org.sonatype.nexus.configuration.model.CRepository;
 import org.sonatype.nexus.configuration.model.CRepositoryExternalConfigurationHolderFactory;
+import org.sonatype.nexus.plugins.RepositoryType;
 import org.sonatype.nexus.proxy.IllegalOperationException;
 import org.sonatype.nexus.proxy.ItemNotFoundException;
 import org.sonatype.nexus.proxy.LocalStorageException;
@@ -38,6 +44,8 @@ import org.sonatype.nexus.proxy.item.StorageCollectionItem;
 import org.sonatype.nexus.proxy.item.StorageItem;
 import org.sonatype.nexus.proxy.item.StorageLinkItem;
 import org.sonatype.nexus.proxy.registry.ContentClass;
+import org.sonatype.nexus.proxy.registry.RepositoryRegistry;
+import org.sonatype.nexus.proxy.repository.AbstractRepositoryConfigurator;
 import org.sonatype.nexus.proxy.repository.AbstractShadowRepository;
 import org.sonatype.nexus.proxy.repository.DefaultRepositoryKind;
 import org.sonatype.nexus.proxy.repository.IncompatibleMasterRepositoryException;
@@ -60,38 +68,38 @@ import com.google.common.eventbus.Subscribe;
  * 2. files and folders in an archive can be browsed under the path of the archive + slash + path
  * within archive
  */
-/*
- * Within Nexus 1.6 the plugin worked without the annotation. Within Nexus 1.7 is still working, but
- * a warning is logged that the plugin misses to register it's type correctly.
- * 
- * Reference: Nexus Book - Chapter 18. Developing Nexus Plugins -
- * http://www.sonatype.com/books/nexus-book/reference/plugdev.html The documentation describes to
- * tag the repository interface (UnzipRepository) with the RepositoryType annotation. This does not
- * work as described. (Neither with 1.6, nor with 1.7) Tagging the implementation class works in
- * Nexus 1.7 as described. (incl. the promised repository appearance in .../nexus/content..) Within
- * Nexus 1.6 an exception will be logged during startup, but the plugin still works functional
- * correct.
- */
-@Component(role = UnzipRepository.class, hint = DefaultUnzipRepository.REPOSITORY_HINT, instantiationStrategy = "per-lookup", description = "Unzip Repository")
+@Named(DefaultUnzipRepository.REPOSITORY_HINT)
+@Description("Unzip Repository")
+@Typed(UnzipRepository.class)
+@RepositoryType(pathPrefix = "unzip")
 public class DefaultUnzipRepository extends AbstractShadowRepository implements UnzipRepository {
     static final String REPOSITORY_HINT = "org.eclipse.tycho.nexus.plugin.DefaultUnzipRepository";
 
-    @Requirement
-    private UnzipRepositoryConfigurator configurator;
+    private final UnzipRepositoryConfigurator configurator;
 
-    @Requirement(hint = "maven2")
-    private ContentClass contentClass;
+    private final ContentClass contentClass;
 
-    @Requirement(hint = "maven2")
-    private ContentClass masterContentClass;
+    private final ContentClass masterContentClass;
 
-    @Requirement
-    private ApplicationStatusSource statusSource;
+    private final ApplicationStatusSource statusSource;
 
     private RepositoryKind repositoryKind;
     private UnzipCache cache;
     private boolean processedNexusStartedEvent = false;
     private boolean isMasterAvailable = false;
+
+    private final RepositoryRegistry repositoryRegistry;
+
+    @Inject
+    public DefaultUnzipRepository(final RepositoryRegistry repositoryRegistry,
+            final UnzipRepositoryConfigurator configurator, @Named("maven2") final ContentClass contentClass,
+            @Named("maven2") final ContentClass masterContentClass, final ApplicationStatusSource statusSource) {
+        this.repositoryRegistry = repositoryRegistry;
+        this.configurator = configurator;
+        this.contentClass = contentClass;
+        this.masterContentClass = masterContentClass;
+        this.statusSource = statusSource;
+    }
 
     // If a class instance of DefaultUnzipRepository is created before Nexus startup finished the field statusSource gets
     // and keeps an invalid proxy instance from plexus which always throws an IllegalStateException if being asked
@@ -100,8 +108,8 @@ public class DefaultUnzipRepository extends AbstractShadowRepository implements 
     // This is true for all unzip repositories being listed in the nexus.xml file on startup.
     //
     // If a class instance of DefaultUnzipRepository is created e.g. from the UI after Nexus startup finished it
-    // won't ever get a NexusStartedEvent so for these DefaultUnzipRepository instances the field 
-    // processedNexusStartedEvent will always be false. But the field statusSource is now valid and we can ask for the 
+    // won't ever get a NexusStartedEvent so for these DefaultUnzipRepository instances the field
+    // processedNexusStartedEvent will always be false. But the field statusSource is now valid and we can ask for the
     // correct state.
     private boolean isNexusStarted() {
         if (processedNexusStartedEvent) {
@@ -117,7 +125,7 @@ public class DefaultUnzipRepository extends AbstractShadowRepository implements 
     }
 
     @Override
-    protected Configurator getConfigurator() {
+    protected AbstractRepositoryConfigurator getConfigurator() {
         return configurator;
     }
 
@@ -152,34 +160,16 @@ public class DefaultUnzipRepository extends AbstractShadowRepository implements 
     }
 
     /*
-     * Need to overwrite setMasterRepositoryId(String id) getMasterRepository() getLocalStatus()
-     * onEvent(Event<?> evt) in order to allow Unzip repositories in front of repository groups.
-     * During Nexus startup repository creation repository groups are explicitly created AFTER all
-     * other repositories. see
+     * Need to overwrite setMasterRepository(final Repository masterRepository),
+     * getMasterRepository(), getLocalStatus() onEvent(Event<?> evt), doConfigure() in order to
+     * allow Unzip repositories in front of repository groups. During Nexus startup repository
+     * creation repository groups are explicitly created AFTER all other repositories. see
      * org.sonatype.nexus.configuration.application.DefaultNexusConfiguration#createRepositories()
      * As a result at creation time of this repository the master is not yet available in case the
      * master is a group. After Nexus startup is complete all methods behave like default. In the
      * meantime the master repository id will be stored without availability, compatibility checks
      * avoiding error logs.
      */
-    @Override
-    public void setMasterRepositoryId(final String id) throws NoSuchRepositoryException,
-            IncompatibleMasterRepositoryException {
-        try {
-            Repository repository = getRepositoryRegistry().getRepository(id);
-            super.setMasterRepository(repository);
-            isMasterAvailable = true;
-        } catch (final NoSuchRepositoryException e) {
-            if (isNexusStarted()) {
-                throw e;
-            } else {
-                // NoSuchRepositoryException yet. Just remember the id
-                getExternalConfiguration(true).setMasterRepositoryId(id);
-            }
-        }
-    }
-
-    // see comment at setMasterRepositoryId(String id)
     @Override
     public void setMasterRepository(final Repository masterRepository) throws IncompatibleMasterRepositoryException {
         super.setMasterRepository(masterRepository);
@@ -193,7 +183,6 @@ public class DefaultUnzipRepository extends AbstractShadowRepository implements 
             return super.getMasterRepository();
         }
         return null;
-
     }
 
     // see comment at setMasterRepositoryId(String id)
@@ -218,15 +207,37 @@ public class DefaultUnzipRepository extends AbstractShadowRepository implements 
         if (!isMasterAvailable) {
             String repositoryId = getExternalConfiguration(false).getMasterRepositoryId();
             try {
-                setMasterRepositoryId(repositoryId);
-            } catch (NoSuchRepositoryException e) {
-                getLogger().error("[" + repositoryId + "] " + "cannot set master repository " + e.getMessage());
-
+                reallyDoConfigure();
             } catch (IncompatibleMasterRepositoryException e) {
                 getLogger().error("[" + repositoryId + "] " + "cannot set master repository " + e.getMessage());
+            } catch (ConfigurationException e) {
+                getLogger().error("[" + repositoryId + "] " + "cannot configure " + e.getMessage());
             }
         }
         processedNexusStartedEvent = true;
+    }
+
+    @Override
+    protected void doConfigure() throws ConfigurationException {
+        final String repositoryId = getExternalConfiguration(false).getMasterRepositoryId();
+        try {
+            getRepositoryRegistry().getRepository(repositoryId);
+            reallyDoConfigure();
+        } catch (final NoSuchRepositoryException e) {
+            getLogger().warn("Repository '" + repositoryId + "' not yet present. doConfigure skipped.");
+        }
+    }
+
+    private void reallyDoConfigure() throws ConfigurationException {
+        super.doConfigure();
+    }
+
+    protected Logger getLogger() {
+        return this.log;
+    }
+
+    protected RepositoryRegistry getRepositoryRegistry() {
+        return this.repositoryRegistry;
     }
 
     @Subscribe
@@ -234,7 +245,8 @@ public class DefaultUnzipRepository extends AbstractShadowRepository implements 
         final String eventRepositoryId = evt.getRepository().getId();
         if (super.getMasterRepository() != null && eventRepositoryId.equals(super.getMasterRepository().getId())) {
             try {
-                setMasterRepositoryId(eventRepositoryId);
+                final Repository masterRepository = getRepositoryRegistry().getRepository(eventRepositoryId);
+                setMasterRepository(masterRepository);
             } catch (final NoSuchRepositoryException e) {
                 getLogger().warn("Master Repository not available", e);
             } catch (final IncompatibleMasterRepositoryException e) {
@@ -245,7 +257,7 @@ public class DefaultUnzipRepository extends AbstractShadowRepository implements 
 
     /**
      * Retrieves an item from the master repository.
-     * 
+     *
      * @param requestPath
      *            the path to the item be retrieved from the master repository
      * @param originalRequest
@@ -324,7 +336,7 @@ public class DefaultUnzipRepository extends AbstractShadowRepository implements 
      * Checks if the request path represents a zipped item (a file or directory within a zip file)
      * and if yes returns it. If the request path does not represent a zipped item <code>null</code>
      * is returned
-     * 
+     *
      * @param conversionResult
      *            the result of the snapshot path conversion, containing the converted path
      * @param request

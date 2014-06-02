@@ -1,12 +1,12 @@
 /*******************************************************************************
- * Copyright (c) 2010, 2014 SAP AG and others.
+ * Copyright (c) 2010, 2014 SAP SE and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *    SAP AG - initial API and implementation
+ *    SAP SE - initial API and implementation
  *******************************************************************************/
 package org.eclipse.tycho.nexus.internal.plugin.test;
 
@@ -39,7 +39,7 @@ import org.sonatype.nexus.proxy.item.uid.RepositoryItemUidAttributeManager;
 import org.sonatype.nexus.proxy.registry.ContentClass;
 import org.sonatype.nexus.proxy.repository.AbstractRepository;
 import org.sonatype.nexus.proxy.repository.RepositoryKind;
-import org.sonatype.nexus.util.ItemPathUtils;
+import org.sonatype.nexus.util.PathUtils;
 
 @SuppressWarnings({ "nls", "deprecation" })
 public class RepositoryMock extends AbstractRepository {
@@ -119,7 +119,7 @@ public class RepositoryMock extends AbstractRepository {
 
     public StorageItem createStorageItem(final String path) throws StorageException, ItemNotFoundException,
             IllegalOperationException {
-        final String pathWithoutTrailingSlash = ItemPathUtils.cleanUpTrailingSlash(path);
+        final String pathWithoutTrailingSlash = PathUtils.cleanUpTrailingSlash(path);
         final File file = new File("./src/test/resources/" + repositoryId + pathWithoutTrailingSlash);
         if (!file.exists()) {
             throw new ItemNotFoundException(new ResourceStoreRequest(pathWithoutTrailingSlash));

@@ -1,12 +1,12 @@
 /*******************************************************************************
- * Copyright (c) 2010, 2014 SAP AG and others.
+ * Copyright (c) 2010, 2014 SAP SE and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *    SAP AG - initial API and implementation
+ *    SAP SE - initial API and implementation
  *******************************************************************************/
 package org.eclipse.tycho.nexus.internal.plugin.storage;
 
@@ -26,7 +26,7 @@ import org.sonatype.nexus.proxy.RequestContext;
 import org.sonatype.nexus.proxy.ResourceStoreRequest;
 import org.sonatype.nexus.proxy.item.DefaultStorageCollectionItem;
 import org.sonatype.nexus.proxy.item.DefaultStorageFileItem;
-import org.sonatype.nexus.util.ItemPathUtils;
+import org.sonatype.nexus.util.PathUtils;
 
 @SuppressWarnings("nls")
 public class ZippedItemTest extends UnzipPluginTestSupport {
@@ -133,14 +133,14 @@ public class ZippedItemTest extends UnzipPluginTestSupport {
         final String pathInZip = "dir/";
         final ZippedItem zippedItem = createZippedItem(pathInZip);
 
-        Assert.assertEquals(ItemPathUtils.cleanUpTrailingSlash(pathInZip), zippedItem.getPathInZip());
-        Assert.assertEquals(ItemPathUtils.cleanUpTrailingSlash(pathToUnzippedArchive + "/" + pathInZip),
+        Assert.assertEquals(PathUtils.cleanUpTrailingSlash(pathInZip), zippedItem.getPathInZip());
+        Assert.assertEquals(PathUtils.cleanUpTrailingSlash(pathToUnzippedArchive + "/" + pathInZip),
                 zippedItem.getPath());
         Assert.assertNull(zippedItem.getMimeType());
 
         final DefaultStorageCollectionItem zippedStorageItem = (DefaultStorageCollectionItem) zippedItem
                 .getZippedStorageItem();
-        Assert.assertEquals(ItemPathUtils.cleanUpTrailingSlash(pathToUnzippedArchive + "/" + pathInZip),
+        Assert.assertEquals(PathUtils.cleanUpTrailingSlash(pathToUnzippedArchive + "/" + pathInZip),
                 zippedStorageItem.getPath());
     }
 

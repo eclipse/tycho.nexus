@@ -1,12 +1,12 @@
 /*******************************************************************************
- * Copyright (c) 2010, 2014 SAP AG and others.
+ * Copyright (c) 2010, 2014 SAP SE and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *    SAP AG - initial API and implementation
+ *    SAP SE - initial API and implementation
  *******************************************************************************/
 package org.eclipse.tycho.nexus.internal.plugin.cache;
 
@@ -26,11 +26,11 @@ import org.sonatype.nexus.proxy.item.StorageItem;
 import org.sonatype.nexus.proxy.storage.UnsupportedStorageOperationException;
 import org.sonatype.nexus.proxy.storage.local.LocalRepositoryStorage;
 import org.sonatype.nexus.proxy.storage.local.fs.DefaultFSLocalRepositoryStorage;
-import org.sonatype.nexus.util.ItemPathUtils;
+import org.sonatype.nexus.util.PathUtils;
 
 public class UnzipCache {
 
-    private final DefaultUnzipRepository repository;
+    final DefaultUnzipRepository repository;
     private final LocalRepositoryStorage localStorage;
     private final Logger logger;
 
@@ -43,16 +43,16 @@ public class UnzipCache {
     /**
      * Returns the requested artifact from the local storage if the artifact was already cached. If
      * not it retrieves it from the corresponding repository and stores it in the local storage.
-     * 
+     *
      * @param zipItemPath
      *            the path to the zip file
      * @return the file in the local storage
-     * 
+     *
      * @throws ItemNotFoundException
      *             thrown if the artifact cannot be found in the repository
-     * 
+     *
      * @throws LocalStorageException
-     * 
+     *
      */
     public File getArchive(final String zipItemPath) throws ItemNotFoundException, LocalStorageException {
         final PathLockMonitor folderLock = PathLock.getLock(getRequestPathParent(zipItemPath));
@@ -78,13 +78,13 @@ public class UnzipCache {
     /**
      * Depending on the conversion result out-dated snapshots are removed from the storage, if
      * possible.
-     * 
-     * 
+     *
+     *
      * @param conversionResult
      *            if a snapshot conversion took place, old snapshot artifacts are removed from the
      *            cache. If no snapshot has been found, all snapshot artifacts are removed from the
      *            cache
-     * 
+     *
      * @throws ItemNotFoundException
      *             thrown if the artifact cannot be found in the repository
      */
@@ -123,7 +123,7 @@ public class UnzipCache {
                 // do nothing, as we accept if the file cannot be deleted
             } catch (final ItemNotFoundException e) {
                 // do nothing, as we accept that files might be deleted on OS level
-                // e,g localStorage.listItems(repository, parentPathRequest) throws this exception in case 
+                // e,g localStorage.listItems(repository, parentPathRequest) throws this exception in case
                 // the parent folder was removed from the file system
             } finally {
                 PathLock.releaseLock(folderLock);
@@ -132,7 +132,7 @@ public class UnzipCache {
     }
 
     private static String getRequestPathParent(final String path) {
-        return ItemPathUtils.getParentPath(path) + ItemPathUtils.PATH_SEPARATOR;
+        return PathUtils.getParentPath(path) + PathUtils.PATH_SEPARATOR;
     }
 
     private StorageItem retrieveItemFromMaster(final ResourceStoreRequest masterRepositoryRequest)
