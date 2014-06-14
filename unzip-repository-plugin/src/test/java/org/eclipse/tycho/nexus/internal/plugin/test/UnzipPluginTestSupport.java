@@ -22,4 +22,9 @@ public class UnzipPluginTestSupport extends NexusTestSupport {
         return UnzipRepositoryMock.createUnzipRepository(masterRepository, lookup(LinkPersister.class),
                 lookup(RepositoryItemUidFactory.class));
     }
+
+    protected RepositoryMock createRedeployRelRepo() throws Exception {
+        return RepositoryMock.createRedeployRelRepo(lookup(RepositoryItemUidFactory.class),
+                lookup(RepositoryItemUidAttributeManager.class));
+    }
 }

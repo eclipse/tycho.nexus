@@ -23,6 +23,9 @@ import org.sonatype.nexus.proxy.ItemNotFoundException;
 import org.sonatype.nexus.proxy.LocalStorageException;
 import org.sonatype.nexus.proxy.ResourceStoreRequest;
 import org.sonatype.nexus.proxy.item.StorageItem;
+import org.sonatype.nexus.proxy.maven.MavenRepository;
+import org.sonatype.nexus.proxy.maven.RepositoryPolicy;
+import org.sonatype.nexus.proxy.repository.RepositoryWritePolicy;
 import org.sonatype.nexus.proxy.storage.UnsupportedStorageOperationException;
 import org.sonatype.nexus.proxy.storage.local.LocalRepositoryStorage;
 import org.sonatype.nexus.proxy.storage.local.fs.DefaultFSLocalRepositoryStorage;
@@ -59,12 +62,30 @@ public class UnzipCache {
         try {
             synchronized (folderLock) {
                 final ResourceStoreRequest request = new ResourceStoreRequest(zipItemPath);
+                boolean doReleaseRedeployCheck = false;
+
                 if (!localStorage.containsItem(repository, request)) {
                     logger.debug("Caching zip file from master repository: " + zipItemPath);
                     final StorageItem storageItem = retrieveItemFromMaster(request);
                     localStorage.storeItem(repository, storageItem);
+                } else {
+                    //repositoryWritePolicy only if cache is already filled
+                    doReleaseRedeployCheck = masterIsReleaseRepoAndSupportsRedeploy();
+                    logger.debug("doReleaseRedeployCheck: " + doReleaseRedeployCheck);
                 }
-                final File file = ((DefaultFSLocalRepositoryStorage) localStorage).getFileFromBase(repository, request);
+                File file = ((DefaultFSLocalRepositoryStorage) localStorage).getFileFromBase(repository, request);
+
+                if (doReleaseRedeployCheck) {
+                    long cacheModified = file.lastModified();
+                    final StorageItem storageItem = retrieveItemFromMaster(request);
+
+                    if (storageItem.getModified() > cacheModified) {
+                        logger.debug("Release redpeloy detected: Caching zip file from master repository: "
+                                + zipItemPath);
+                        localStorage.storeItem(repository, storageItem);
+                        file = ((DefaultFSLocalRepositoryStorage) localStorage).getFileFromBase(repository, request);
+                    }
+                }
                 logger.debug("Accessed cached zip file: " + zipItemPath);
                 return file;
             }
@@ -148,4 +169,15 @@ public class UnzipCache {
         }
     }
 
+    private boolean masterIsReleaseRepoAndSupportsRedeploy() {
+        boolean releaseRepo = false;
+
+        if (repository.getMasterRepository() instanceof MavenRepository) {
+            releaseRepo = RepositoryPolicy.RELEASE.equals(((MavenRepository) repository.getMasterRepository())
+                    .getRepositoryPolicy());
+        }
+
+        return releaseRepo
+                && RepositoryWritePolicy.ALLOW_WRITE.equals(repository.getMasterRepository().getWritePolicy());
+    }
 }

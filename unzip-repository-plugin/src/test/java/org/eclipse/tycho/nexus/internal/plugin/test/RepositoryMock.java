@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.net.URLConnection;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.Map;
 
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
@@ -30,15 +31,24 @@ import org.sonatype.nexus.proxy.NoSuchResourceStoreException;
 import org.sonatype.nexus.proxy.RequestContext;
 import org.sonatype.nexus.proxy.ResourceStoreRequest;
 import org.sonatype.nexus.proxy.StorageException;
+import org.sonatype.nexus.proxy.item.AbstractStorageItem;
 import org.sonatype.nexus.proxy.item.ContentLocator;
 import org.sonatype.nexus.proxy.item.DefaultStorageFileItem;
 import org.sonatype.nexus.proxy.item.RepositoryItemUidFactory;
 import org.sonatype.nexus.proxy.item.StorageCollectionItem;
 import org.sonatype.nexus.proxy.item.StorageItem;
 import org.sonatype.nexus.proxy.item.uid.RepositoryItemUidAttributeManager;
+import org.sonatype.nexus.proxy.maven.ArtifactStoreHelper;
+import org.sonatype.nexus.proxy.maven.MavenRepository;
+import org.sonatype.nexus.proxy.maven.MetadataManager;
+import org.sonatype.nexus.proxy.maven.RepositoryPolicy;
+import org.sonatype.nexus.proxy.maven.gav.GavCalculator;
+import org.sonatype.nexus.proxy.maven.packaging.ArtifactPackagingMapper;
 import org.sonatype.nexus.proxy.registry.ContentClass;
 import org.sonatype.nexus.proxy.repository.AbstractRepository;
 import org.sonatype.nexus.proxy.repository.RepositoryKind;
+import org.sonatype.nexus.proxy.repository.RepositoryWritePolicy;
+import org.sonatype.nexus.proxy.storage.UnsupportedStorageOperationException;
 import org.sonatype.nexus.util.PathUtils;
 
 @SuppressWarnings({ "nls", "deprecation" })
@@ -70,7 +80,18 @@ public class RepositoryMock extends AbstractRepository {
         return new RepositoryMock("masterRepo", repositoryItemUidFactory, repositoryItemUidAttributeManager);
     }
 
-    private RepositoryMock(final String repositoryId, RepositoryItemUidFactory repositoryItemUidFactory,
+    /**
+     * Creates a Repository with dummy content from src/test/resources/masterRepo
+     * 
+     * @return
+     */
+    public static RepositoryMock createRedeployRelRepo(RepositoryItemUidFactory repositoryItemUidFactory,
+            RepositoryItemUidAttributeManager repositoryItemUidAttributeManager) {
+        return new MavenRepositoryMock("redeployRelRepo", repositoryItemUidFactory, repositoryItemUidAttributeManager,
+                RepositoryPolicy.RELEASE, RepositoryWritePolicy.ALLOW_WRITE);
+    }
+
+    RepositoryMock(final String repositoryId, RepositoryItemUidFactory repositoryItemUidFactory,
             RepositoryItemUidAttributeManager repositoryItemUidAttributeManager) {
         this.repositoryId = repositoryId;
         this.repositoryItemUidFactory = repositoryItemUidFactory;
@@ -210,4 +231,98 @@ public class RepositoryMock extends AbstractRepository {
         return null;
     }
 
+    public static class MavenRepositoryMock extends RepositoryMock implements MavenRepository {
+
+        private RepositoryPolicy repositoryPolicy;
+        private RepositoryWritePolicy repositoryWritePolicy;
+
+        MavenRepositoryMock(String repositoryId, RepositoryItemUidFactory repositoryItemUidFactory,
+                RepositoryItemUidAttributeManager repositoryItemUidAttributeManager, RepositoryPolicy repPolicy,
+                RepositoryWritePolicy writePolicy) {
+            super(repositoryId, repositoryItemUidFactory, repositoryItemUidAttributeManager);
+            this.repositoryPolicy = repPolicy;
+            this.repositoryWritePolicy = writePolicy;
+        }
+
+        @Override
+        public RepositoryPolicy getRepositoryPolicy() {
+            return repositoryPolicy;
+        }
+
+        @Override
+        public RepositoryWritePolicy getWritePolicy() {
+            return repositoryWritePolicy;
+        }
+
+        @Override
+        public void deleteItemWithChecksums(ResourceStoreRequest arg0) throws UnsupportedStorageOperationException,
+                ItemNotFoundException, IllegalOperationException, StorageException, AccessDeniedException {
+        }
+
+        @Override
+        public void deleteItemWithChecksums(boolean arg0, ResourceStoreRequest arg1)
+                throws UnsupportedStorageOperationException, IllegalOperationException, ItemNotFoundException,
+                StorageException {
+        }
+
+        @Override
+        public ArtifactPackagingMapper getArtifactPackagingMapper() {
+            return null;
+        }
+
+        @Override
+        public ArtifactStoreHelper getArtifactStoreHelper() {
+            return null;
+        }
+
+        @Override
+        public GavCalculator getGavCalculator() {
+            return null;
+        }
+
+        @Override
+        public MetadataManager getMetadataManager() {
+            return null;
+        }
+
+        @Override
+        public boolean isMavenArtifact(StorageItem arg0) {
+            return false;
+        }
+
+        @Override
+        public boolean isMavenArtifactPath(String arg0) {
+            return false;
+        }
+
+        @Override
+        public boolean isMavenMetadata(StorageItem arg0) {
+            return false;
+        }
+
+        @Override
+        public boolean isMavenMetadataPath(String arg0) {
+            return false;
+        }
+
+        @Override
+        public boolean recreateMavenMetadata(ResourceStoreRequest arg0) {
+            return false;
+        }
+
+        @Override
+        public void setRepositoryPolicy(RepositoryPolicy arg0) {
+        }
+
+        @Override
+        public void storeItemWithChecksums(boolean arg0, AbstractStorageItem arg1)
+                throws UnsupportedStorageOperationException, IllegalOperationException, StorageException {
+        }
+
+        @Override
+        public void storeItemWithChecksums(ResourceStoreRequest arg0, InputStream arg1, Map<String, String> arg2)
+                throws UnsupportedStorageOperationException, ItemNotFoundException, IllegalOperationException,
+                StorageException, AccessDeniedException {
+        }
+    }
 }
