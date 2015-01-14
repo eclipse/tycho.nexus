@@ -74,7 +74,7 @@
 		<!-- minimum nexus version to run ITs against -->
 		<nexus.test.min.version>${nexus.version}</nexus.test.min.version>
 		<!-- maximum nexus version to run ITs against -->
-		<nexus.test.max.version>2.10.0-02</nexus.test.max.version>
+		<nexus.test.max.version>2.11.1-01</nexus.test.max.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 	</properties>
